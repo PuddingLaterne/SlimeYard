@@ -101,10 +101,11 @@ public class Snail : MonoBehaviour
 
     private void UpdateTransform()
     {
-        transform.position += transform.up * MoveSpeed * (isBoosting ? boostMultiplier : 1f) * Time.deltaTime;
+        float boost = isBoosting ? boostMultiplier : 0f;
+        transform.position += transform.up * MoveSpeed * (1f + boost) * Time.deltaTime;
 
         float rotation = transform.eulerAngles.z;
-        rotation += Input.GetAxis(AssignedPlayer.ToString()) * TurnSpeed  * Time.deltaTime;
+        rotation += Input.GetAxis(AssignedPlayer.ToString()) * TurnSpeed * (1f + boost * 0.5f) * Time.deltaTime;
         transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, rotation);
     }
 

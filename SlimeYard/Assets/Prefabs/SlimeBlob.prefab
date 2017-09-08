@@ -151,20 +151,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7c3a8025bb9f8c44832981d3a665d3c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Distortion: 0.02
-  Lifetime: 20
+  Distortion: 0.04
+  Lifetime: 22
   SizeOverLifetime:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 2
       time: 0
       value: 0.9828644
-      inSlope: 6.6209764
-      outSlope: 6.6209764
+      inSlope: 13.629988
+      outSlope: 13.629988
       tangentMode: 0
     - serializedVersion: 2
-      time: 0.037257075
-      value: 1.29016
+      time: 0.05
+      value: 1.4999981
       inSlope: 0.24614888
       outSlope: 0.24614888
       tangentMode: 0

@@ -607,33 +607,33 @@ MonoBehaviour:
   SlimeSound: {fileID: 82072878332414384}
   BoostSound: {fileID: 114104021804202668}
   BlobCreateSound: {fileID: 114233305047155984}
-  MoveSpeed: 0.8
-  TurnSpeed: 90
+  MoveSpeed: 1.2
+  TurnSpeed: 130
   BoostSpeedMultiplier:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 2
       time: 0
-      value: 1
+      value: 0
       inSlope: 14.205159
       outSlope: 14.205159
       tangentMode: 0
     - serializedVersion: 2
       time: 0.5
-      value: 4.999996
+      value: 3.9999962
       inSlope: 0
       outSlope: 0
       tangentMode: 0
     - serializedVersion: 2
       time: 1
-      value: 1
+      value: 0
       inSlope: -14.497455
       outSlope: -14.497455
       tangentMode: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
-  MaxBoostDuration: 1
+  MaxBoostDuration: 0.8
   BoostSteps: 6
   BoostRecoveryTime: 2
 --- !u!114 &114104021804202668

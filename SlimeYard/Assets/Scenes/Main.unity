@@ -2966,8 +2966,14 @@ MonoBehaviour:
   - {x: -1, y: 0}
   - {x: 1, y: 0}
   PlayerStartOrientation:
-  - 0
-  - 180
+  - 90
+  - -90
+  PlayerMenuPositions:
+  - {x: -0.5, y: 0}
+  - {x: 0.5, y: 0}
+  PlayerMenuOrientation:
+  - -90
+  - 90
   BlobObjectPool: {fileID: 92005653}
   SnailPrefab: {fileID: 1100051960518812, guid: 29a6735da7c4142488059873fb13d53e,
     type: 2}
@@ -6519,7 +6525,7 @@ Camera:
   field of view: 20
   orthographic: 0
   orthographic size: 5
-  m_Depth: -1
+  m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967039

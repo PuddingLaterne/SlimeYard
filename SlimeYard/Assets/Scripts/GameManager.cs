@@ -40,6 +40,8 @@ public class GameManager : MonoBehaviour
     public Color[] PlayerColors = new Color[numPlayers];
     public Vector2[] PlayerStartPositions = new Vector2[numPlayers];
     public float[] PlayerStartOrientation = new float[numPlayers];
+    public Vector2[] PlayerMenuPositions = new Vector2[numPlayers];
+    public float[] PlayerMenuOrientation = new float[numPlayers];
 
     [Header("Prefabs and ObjectPools")]
     public ObjectPool BlobObjectPool;
@@ -111,47 +113,59 @@ public class GameManager : MonoBehaviour
     private void SetGameState(GameState newState, float transitionDuration = 0f)
     {
         gameState = newState;
+        CanvasGroup newCanvas = null;
+        CanvasGroup oldCanvas = null;
+        Transform targetTransform = null;
+
         switch(gameState)
         {
             case GameState.Battle:
                 SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.GameStart);
-                Camera.main.transform.DOMove(BattleCamPos.position, transitionDuration);
-                Camera.main.transform.DORotateQuaternion(BattleCamPos.rotation, transitionDuration);
-                MenuCanvas.DOFade(0f, transitionDuration * 0.5f);
-                BattleCanvas.DOFade(1f, transitionDuration * 0.5f).SetDelay(transitionDuration * 0.5f);
-                StartRound();
+                targetTransform = BattleCamPos;
+                newCanvas = MenuCanvas;
+                oldCanvas = BattleCanvas;
+                StartRound(transitionDuration);
                 StartCoroutine(WaitForEnableMovement(transitionDuration, true));
                 break;
             case GameState.Menu:
-                Camera.main.transform.DOMove(MenuCamPos.position, transitionDuration);
-                Camera.main.transform.DORotateQuaternion(MenuCamPos.rotation, transitionDuration);
-                BattleCanvas.DOFade(0f, transitionDuration * 0.5f);
-                MenuCanvas.DOFade(1f, transitionDuration * 0.5f).SetDelay(transitionDuration * 0.5f);
+                targetTransform = MenuCamPos;
+                newCanvas = BattleCanvas;
+                oldCanvas = MenuCanvas;
                 BlobObjectPool.Reset();
                 currentRound = 1;
                 for (int i = 0; i < numPlayers; i++)
                 {
                     score[i] = 0;
                     Snail snail = snails[i];
-                    snail.transform.position = PlayerStartPositions[i];
-                    snail.transform.eulerAngles = new Vector3(0f, 0f, PlayerStartOrientation[i]);
+                    snail.transform.position = PlayerMenuPositions[i];
+                    snail.transform.eulerAngles = new Vector3(0f, 0f, PlayerMenuOrientation[i]);
                     snail.enabled = false;
                     snail.Trail.Clear();
                 }
                 break;
         }
+        Camera.main.DOKill();
+        Camera.main.transform.DOMove(targetTransform.position, transitionDuration);
+        Camera.main.transform.DORotateQuaternion(targetTransform.rotation, transitionDuration);
+
+        newCanvas.DOKill();
+        newCanvas.DOFade(0f, transitionDuration * 0.5f);
+        oldCanvas.DOKill();
+        oldCanvas.DOFade(1f, transitionDuration * 0.5f).SetDelay(transitionDuration * 0.5f);
+
         SoundManager.Instance.SwitchMusic(gameState, transitionDuration);
     }
 
-    private void StartRound()
+    private void StartRound(float transitionDuration = 0f)
     {
         UpdateScoreGUI();
         for (int i = 0; i < numPlayers; i++)
         {
             Snail snail = snails[i];
             snail.Reset();
-            snail.transform.position = PlayerStartPositions[i];
-            snail.transform.eulerAngles = new Vector3(0f, 0f, PlayerStartOrientation[i]);
+            snail.transform.DOKill();
+            snail.transform.DOMove(PlayerStartPositions[i], transitionDuration).SetDelay(transitionDuration * 0.4f);
+            snail.transform.DORotate(new Vector3(0f, 0f, PlayerStartOrientation[i]), transitionDuration * 0.4f);
             snail.Trail.Clear();
 
             InfoText.text = "";

@@ -59,7 +59,7 @@ public class Trail : MonoBehaviour
     private LineRenderer lineRenderer;
     private EdgeCollider2D edgeCollider;
 
-    private const int minShapePointCount = 5;
+    private const int excludeFromShapeCreationPointCount = 2;
 
     public void Clear()
     {
@@ -99,7 +99,7 @@ public class Trail : MonoBehaviour
     {
         int closestPoint = -1;
         float closestDistance = float.MaxValue;
-        for(int i = 0; i < points.Count - minShapePointCount; i++)
+        for(int i = 0; i < points.Count - excludeFromShapeCreationPointCount; i++)
         {
             float distance = Vector2.Distance(collisionPos, points[i].Position);
             if(distance < closestDistance)
@@ -108,13 +108,23 @@ public class Trail : MonoBehaviour
                 closestPoint = i;
             }
         }
-        Vector2[] positions = new Vector2[points.Count - closestPoint + 1];
+        int shapePointCount = points.Count - closestPoint + 1;
+        if (shapePointCount == 0) return new Vector2[0];
+
+        List<Point> pointsToRemoveFromTrail = new List<Point>();
+        Vector2[] positions = new Vector2[shapePointCount];
         Vector2 center = Vector2.zero;
         for (int i = 0; i < positions.Length - 1; i++)
         {
+            pointsToRemoveFromTrail.Add(points[i + closestPoint]);
             positions[i] = points[i + closestPoint].Position;
             center += positions[i];
         }
+        foreach (Point pointToRemove in pointsToRemoveFromTrail)
+        {
+            points.Remove(pointToRemove);
+        }
+        UpdatePoints();
         positions[positions.Length - 1] = center / positions.Length;
         return positions;
     }
