@@ -17,6 +17,13 @@ public enum GameState
     Battle
 }
 
+public enum GameOverType
+{
+    Slime,
+    WallCrash,
+    SnailCrash
+}
+
 public class GameManager : MonoBehaviour
 {
     [Header("Round System")]
@@ -76,7 +83,7 @@ public class GameManager : MonoBehaviour
             snail.gameObject.tag = snail.AssignedPlayer.ToString();
             snail.Trail.gameObject.tag = snail.gameObject.tag;
 
-            snail.OnCrash += (snailCrash) => { if(!gameOver) StartCoroutine(GameOver(snailIndex, snailCrash)); };
+            snail.OnCrash += (type) => { if(!gameOver) StartCoroutine(GameOver(snailIndex, type)); };
             snail.OnCreateSlimeBlob += (positions) => { CreateSlimeBlob(positions, snailIndex); };
             snail.OnBoostChargeChanged += (charge) => { UpdateBoostGUI(charge, snailIndex); };
 
@@ -107,6 +114,7 @@ public class GameManager : MonoBehaviour
         switch(gameState)
         {
             case GameState.Battle:
+                SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.GameStart);
                 Camera.main.transform.DOMove(BattleCamPos.position, transitionDuration);
                 Camera.main.transform.DORotateQuaternion(BattleCamPos.rotation, transitionDuration);
                 MenuCanvas.DOFade(0f, transitionDuration * 0.5f);
@@ -132,10 +140,12 @@ public class GameManager : MonoBehaviour
                 }
                 break;
         }
+        SoundManager.Instance.SwitchMusic(gameState, transitionDuration);
     }
 
     private void StartRound()
     {
+        UpdateScoreGUI();
         for (int i = 0; i < numPlayers; i++)
         {
             Snail snail = snails[i];
@@ -215,7 +225,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private IEnumerator GameOver(int snailIndex, bool snailCrash)
+    private IEnumerator GameOver(int snailIndex, GameOverType gameOverType)
     {
         gameOver = true;
         EnableSnailMovement(false);
@@ -223,21 +233,27 @@ public class GameManager : MonoBehaviour
         bool lastRound = (currentRound == NumRounds);
         InfoOverlay.SetActive(true);
 
-        int winnerIndex = !snailCrash ? (snailIndex + 1) % 2 : -1;
-        if (winnerIndex != -1)
-        {
-            score[winnerIndex]++;
+        int winnerIndex = gameOverType != GameOverType.SnailCrash ? (snailIndex + 1) % 2 : -1;
 
-            InfoText.text = (Player)winnerIndex + " won!";
-            InfoText.color = PlayerColors[winnerIndex];
-        }
-        else
+        switch(gameOverType)
         {
-            InfoText.text ="Snail Crash!";
-            InfoText.color = NeutralColor;
+            case GameOverType.SnailCrash:
+                SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.SnailCrash);
+                InfoText.text = "Snail Crash!";
+                InfoText.color = NeutralColor;
+                break;
+            case GameOverType.WallCrash:
+                SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.WallCrash);
+                IncreaseAndShowWinnerScore(winnerIndex);
+                break;
+            case GameOverType.Slime:
+                SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.Slime);
+                IncreaseAndShowWinnerScore(winnerIndex);
+                break;
         }
+
         UpdateScoreGUI();
-
+        SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.ScoreChange, RoundWaitingTime * 0.5f);
         yield return new WaitForSeconds(RoundWaitingTime);
         if (!lastRound)
         {
@@ -253,8 +269,16 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void IncreaseAndShowWinnerScore(int winnerIndex)
+    {
+        score[winnerIndex]++;
+        InfoText.text = (Player)winnerIndex + " won!";
+        InfoText.color = PlayerColors[winnerIndex];
+    }
+
     private void DisplayResult()
     {
+        SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.GameOver);
         int winnerIndex = -1;
         int highestScore = -1;
         int lastScore = score[0];

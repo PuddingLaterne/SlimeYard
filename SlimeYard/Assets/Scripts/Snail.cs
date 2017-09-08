@@ -6,8 +6,11 @@ using UnityEngine.Events;
 public class Snail : MonoBehaviour
 {
     public Transform TrailOrigin;
+    public AudioSource SlimeSound;
+    public SoundEffect BoostSound;
+    public SoundEffect BlobCreateSound;
 
-    public UnityAction<bool> OnCrash;
+    public UnityAction<GameOverType> OnCrash;
     public UnityAction<Vector2[]> OnCreateSlimeBlob;
     public UnityAction<int> OnBoostChargeChanged;
 
@@ -36,7 +39,7 @@ public class Snail : MonoBehaviour
         }
     }
 
-    private const float pointThreshold = 0.1f;
+    private const float pointThreshold = 0.15f;
 
     public void Reset()
     {
@@ -50,6 +53,16 @@ public class Snail : MonoBehaviour
         UpdateBoost();
     }
 
+    public void OnEnable()
+    {
+        SlimeSound.Play();
+    }
+
+    public void OnDisable()
+    {
+        SlimeSound.Stop();
+    }
+
     private void UpdateBoost()
     {
         if(!isBoosting)
@@ -60,6 +73,7 @@ public class Snail : MonoBehaviour
             boostCharge = Mathf.Min(boostCharge, 1f);
             if (Input.GetButton("Boost" + AssignedPlayer) && charge > 0)
             {
+                BoostSound.Play();
                 OnBoostChargeChanged(-1);
                 isBoosting = true;
                 boostDuration = MaxBoostDuration * ((float)charge / BoostSteps);
@@ -98,11 +112,11 @@ public class Snail : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Environment"))
         {
-            OnCrash(false);
+            OnCrash(GameOverType.WallCrash);
         }
         else
         {
-            OnCrash(true);
+            OnCrash(GameOverType.SnailCrash);
         }
     }
 
@@ -110,7 +124,7 @@ public class Snail : MonoBehaviour
     {
         if (!collider.gameObject.CompareTag(AssignedPlayer.ToString()))
         {
-            OnCrash(false);
+            OnCrash(GameOverType.Slime);
         }
     }
 
@@ -118,6 +132,7 @@ public class Snail : MonoBehaviour
     {
         if (collider.gameObject.CompareTag(AssignedPlayer.ToString()) && collider.GetComponent<Trail>() != null)
         {
+            BlobCreateSound.Play();
             OnCreateSlimeBlob(Trail.GetShapePositions(transform.position));
         }
     }
