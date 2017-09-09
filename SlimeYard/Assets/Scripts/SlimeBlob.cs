@@ -7,16 +7,19 @@ public class SlimeBlob : MonoBehaviour
 {
     public float Distortion = 0.1f;
     public float Lifetime = 2f;
+    public float SplatPlacementProbability = 0.5f;
     public AnimationCurve SizeOverLifetime;
 
     public Color Color
     {
         set
         {
-            GetComponentInChildren<MeshRenderer>().material.SetColor("_Color", value);
+            color = new Color(value.r, value.g, value.b, 0.8f);
+            GetComponentInChildren<MeshRenderer>().material.SetColor("_Color", color);
         }
-    } 
+    }
 
+    private Color color;
     private float creationTime;
 
     public void Create(Vector2[] positions)
@@ -24,8 +27,14 @@ public class SlimeBlob : MonoBehaviour
         Vector2 center = positions[positions.Length - 1];
         Vector2[] localPositions = new Vector2[positions.Length - 1];
         for (int i = 0; i < localPositions.Length; i++)
-        {
+        {   
             localPositions[i] = positions[i] - center + new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * Distortion;
+            if (Random.Range(0f, 1f) <= SplatPlacementProbability)
+            {
+                GameObject splat = SlimeSplatPool.Instance.CreateSlimeSplat(color, Vector3.zero, Lifetime);
+                splat.transform.parent = transform;
+                splat.transform.localPosition = localPositions[i];
+            }
         }
         transform.position = center;
 

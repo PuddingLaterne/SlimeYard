@@ -58,7 +58,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Timing")]
     public float RoundWaitingTime = 2f;
-    public float ResetWaitingTime = 2f;
+    public float ResetWaitingTime = 4f;
 
     private Snail[] snails = new Snail[numPlayers];
     private BoostGauge[] boostGauges = new BoostGauge[numPlayers];
@@ -141,6 +141,7 @@ public class GameManager : MonoBehaviour
                     snail.transform.eulerAngles = new Vector3(0f, 0f, PlayerMenuOrientation[i]);
                     snail.enabled = false;
                     snail.Trail.Clear();
+                    snail.Anim.SetTrigger("start");
                 }
                 break;
         }
@@ -164,14 +165,20 @@ public class GameManager : MonoBehaviour
             Snail snail = snails[i];
             snail.Reset();
             snail.transform.DOKill();
-            snail.transform.DOMove(PlayerStartPositions[i], transitionDuration).SetDelay(transitionDuration * 0.4f);
-            snail.transform.DORotate(new Vector3(0f, 0f, PlayerStartOrientation[i]), transitionDuration * 0.4f);
+            snail.transform.DOMove(PlayerStartPositions[i], transitionDuration).SetDelay(transitionDuration * 0.4f).SetEase(Ease.Linear);
+            snail.Anim.SetFloat("rotation", -1f);
+            snail.transform.DORotate(new Vector3(0f, 0f, PlayerStartOrientation[i]), transitionDuration * 0.4f).OnComplete(
+                () =>
+                {
+                    snail.Anim.SetFloat("rotation", 0f);
+                });
             snail.Trail.Clear();
-
-            InfoText.text = "";
-            RoundText.text = "Round " + currentRound + " : " + NumRounds;
+            snail.Anim.SetTrigger("move");
         }
+        InfoText.text = "";
+        RoundText.text = "Round " + currentRound + " : " + NumRounds;
         BlobObjectPool.Reset();
+        SlimeSplatPool.Instance.Reset();
         gameOver = false;
         InfoOverlay.SetActive(false);
     }
@@ -214,8 +221,8 @@ public class GameManager : MonoBehaviour
         slimeBlobObject.tag = ((Player)snailIndex).ToString();
 
         SlimeBlob slimeBlob = slimeBlobObject.GetComponent<SlimeBlob>();
-        slimeBlob.Create(positions);
         slimeBlob.Color = PlayerColors[snailIndex];
+        slimeBlob.Create(positions);
     }
     
     private void CreateTrail(Snail snail)

@@ -6,39 +6,52 @@ using UnityEngine.Events;
 public class Snail : MonoBehaviour
 {
     public Transform TrailOrigin;
+
+    [Header("Sound")]
     public AudioSource SlimeSound;
     public SoundEffect BoostSound;
     public SoundEffect BlobCreateSound;
+
+    [Header("Speed")]
+    public float MoveSpeed = 1f;
+    public float TurnSpeed = 90f;
+
+    [Header("Boost")]
+    public AnimationCurve BoostSpeedMultiplier;
+    public float MaxBoostDuration = 1;
+    public int BoostSteps = 4;
+    public float BoostRecoveryTime = 2f;
 
     public UnityAction<GameOverType> OnCrash;
     public UnityAction<Vector2[]> OnCreateSlimeBlob;
     public UnityAction<int> OnBoostChargeChanged;
 
     public Player AssignedPlayer { get; set; }
-
-    public float MoveSpeed = 1f;
-    public float TurnSpeed = 90f;
-    public AnimationCurve BoostSpeedMultiplier;
-    public float MaxBoostDuration = 1;
-    public int BoostSteps = 4;
-    public float BoostRecoveryTime = 2f;
-
     public Trail Trail { get; set; }
+    public Color Color
+    {
+        set
+        {
+            GetComponentInChildren<SkinnedMeshRenderer>().material.SetColor("_Color", value);
+        }
+    }
+    public Animator Anim
+    {
+        get
+        {
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>();
+            return anim;
+        }
+    }
 
     private float boostMultiplier;
     private bool isBoosting;
     private float boostActivationTime;
     private float boostCharge;
     private float boostDuration;
-
-    public Color Color
-    {
-        set
-        {
-            GetComponentInChildren<MeshRenderer>().material.SetColor("_Color", value);
-        }
-    }
-
+    private Animator anim;
+    
     private const float pointThreshold = 0.15f;
 
     public void Reset()
@@ -95,8 +108,14 @@ public class Snail : MonoBehaviour
 
     private void UpdateTrail()
     {
-        if(Vector3.Distance(TrailOrigin.position, Trail.LatestPosition) > pointThreshold)
+        if (Vector3.Distance(TrailOrigin.position, Trail.LatestPosition) > pointThreshold)
+        {
+            if (Random.Range(0f, 1f) <= Trail.SplatPlacementProbability)
+            {
+                SlimeSplatPool.Instance.CreateSlimeSplat(Trail.Color, TrailOrigin.position, Trail.PointLifetime);
+            }
             Trail.AddPoint(TrailOrigin.position);
+        }
     }
 
     private void UpdateTransform()
@@ -105,7 +124,9 @@ public class Snail : MonoBehaviour
         transform.position += transform.up * MoveSpeed * (1f + boost) * Time.deltaTime;
 
         float rotation = transform.eulerAngles.z;
-        rotation += Input.GetAxis(AssignedPlayer.ToString()) * TurnSpeed * (1f + boost * 0.5f) * Time.deltaTime;
+        float rotationInput = Input.GetAxis(AssignedPlayer.ToString());
+        Anim.SetFloat("rotation", rotationInput);
+        rotation += rotationInput * TurnSpeed * (1f + boost * 0.5f) * Time.deltaTime;
         transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, rotation);
     }
 
@@ -113,10 +134,12 @@ public class Snail : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Environment"))
         {
+            Anim.SetTrigger("dead");
             OnCrash(GameOverType.WallCrash);
         }
         else
         {
+            Anim.SetTrigger("dead");
             OnCrash(GameOverType.SnailCrash);
         }
     }
@@ -125,6 +148,7 @@ public class Snail : MonoBehaviour
     {
         if (!collider.gameObject.CompareTag(AssignedPlayer.ToString()))
         {
+            Anim.SetTrigger("dead");
             OnCrash(GameOverType.Slime);
         }
     }

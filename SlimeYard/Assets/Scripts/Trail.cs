@@ -46,18 +46,25 @@ public class Trail : MonoBehaviour
     }
     public Color Color
     {
+        get
+        {
+            return color;
+        }
         set
         {
-            LineRenderer.startColor = value;
-            LineRenderer.endColor = value;
+            color = new Color(value.r, value.g, value.b, 0.8f);
+            LineRenderer.startColor = color;
+            LineRenderer.endColor = color;
         }
     }
 
     public float PointLifetime = 1f;
+    public float SplatPlacementProbability = 0.5f;
 
     private List<Point> points = new List<Point>();
     private LineRenderer lineRenderer;
     private EdgeCollider2D edgeCollider;
+    private Color color;
 
     private const int excludeFromShapeCreationPointCount = 2;
 
