@@ -81,6 +81,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7397feaf35e285c4a87fa76bc4b3dd61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  MinSize: 0.2
+  MaxSize: 0.6
+  MaxOffset: 0.2
 --- !u!212 &212329877145134374
 SpriteRenderer:
   m_ObjectHideFlags: 1

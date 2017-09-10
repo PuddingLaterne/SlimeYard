@@ -104,36 +104,43 @@ public class Trail : MonoBehaviour
 
     public Vector2[] GetShapePositions(Vector2 collisionPos)
     {
-        int closestPoint = -1;
-        float closestDistance = float.MaxValue;
-        for(int i = 0; i < points.Count - excludeFromShapeCreationPointCount; i++)
+        try
         {
-            float distance = Vector2.Distance(collisionPos, points[i].Position);
-            if(distance < closestDistance)
+            int closestPoint = -1;
+            float closestDistance = float.MaxValue;
+            for (int i = 0; i < points.Count - excludeFromShapeCreationPointCount; i++)
             {
-                closestDistance = distance;
-                closestPoint = i;
+                float distance = Vector2.Distance(collisionPos, points[i].Position);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestPoint = i;
+                }
             }
-        }
-        int shapePointCount = points.Count - closestPoint + 1;
-        if (shapePointCount == 0) return new Vector2[0];
+            int shapePointCount = points.Count - closestPoint + 1;
 
-        List<Point> pointsToRemoveFromTrail = new List<Point>();
-        Vector2[] positions = new Vector2[shapePointCount];
-        Vector2 center = Vector2.zero;
-        for (int i = 0; i < positions.Length - 1; i++)
-        {
-            pointsToRemoveFromTrail.Add(points[i + closestPoint]);
-            positions[i] = points[i + closestPoint].Position;
-            center += positions[i];
+            List<Point> pointsToRemoveFromTrail = new List<Point>();
+            Vector2[] positions = new Vector2[shapePointCount];
+            Vector2 center = Vector2.zero;
+            for (int i = 0; i < positions.Length - 1; i++)
+            {
+                pointsToRemoveFromTrail.Add(points[i + closestPoint]);
+                positions[i] = points[i + closestPoint].Position;
+                center += positions[i];
+            }
+            foreach (Point pointToRemove in pointsToRemoveFromTrail)
+            {
+                points.Remove(pointToRemove);
+            }
+            UpdatePoints();
+            positions[positions.Length - 1] = center / positions.Length;
+            return positions;
         }
-        foreach (Point pointToRemove in pointsToRemoveFromTrail)
+        catch
         {
-            points.Remove(pointToRemove);
+            Debug.Log("failed to create shape");
+            return new Vector2[0];
         }
-        UpdatePoints();
-        positions[positions.Length - 1] = center / positions.Length;
-        return positions;
     }
 
     private void UpdatePoints()

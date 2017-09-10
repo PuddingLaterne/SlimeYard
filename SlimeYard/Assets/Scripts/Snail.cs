@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using DG.Tweening;
 
 public class Snail : MonoBehaviour
 {
+    public Transform Model;
     public Transform TrailOrigin;
 
     [Header("Sound")]
@@ -15,6 +17,7 @@ public class Snail : MonoBehaviour
     [Header("Speed")]
     public float MoveSpeed = 1f;
     public float TurnSpeed = 90f;
+    public float SlimeSpeedBonus = 0.2f;
 
     [Header("Boost")]
     public AnimationCurve BoostSpeedMultiplier;
@@ -32,7 +35,7 @@ public class Snail : MonoBehaviour
     {
         set
         {
-            GetComponentInChildren<SkinnedMeshRenderer>().material.SetColor("_Color", value);
+            Mat.SetColor("_Color", value);
         }
     }
     public Animator Anim
@@ -44,19 +47,23 @@ public class Snail : MonoBehaviour
             return anim;
         }
     }
+    public Material Mat { get { if (mat == null) mat = GetComponentInChildren<SkinnedMeshRenderer>().material; return mat; } }
 
     private float boostMultiplier;
     private bool isBoosting;
+    private bool isMovingOnSlime;
     private float boostActivationTime;
     private float boostCharge;
     private float boostDuration;
     private Animator anim;
-    
+    private Material mat; 
+
     private const float pointThreshold = 0.15f;
 
     public void Reset()
     {
-        boostCharge = 1f;
+        boostCharge = 0f;
+        isMovingOnSlime = false;
     }
 
     public void Update ()
@@ -74,24 +81,32 @@ public class Snail : MonoBehaviour
     public void OnDisable()
     {
         SlimeSound.Stop();
+        Mat.SetColor("_EmissionColor", Color.black);
     }
 
     private void UpdateBoost()
     {
         if(!isBoosting)
         {
-            int charge = (int)(boostCharge * BoostSteps);
-            OnBoostChargeChanged(charge);
             boostCharge += Time.deltaTime / BoostRecoveryTime;
             boostCharge = Mathf.Min(boostCharge, 1f);
+            int charge = (int)(boostCharge * BoostSteps);
+            float chargeNormalized = (float)charge / BoostSteps;
+            OnBoostChargeChanged(charge);
+
+            Mat.SetColor("_EmissionColor", Color.white * Mathf.Abs(Mathf.Sin(Time.time * 10 * chargeNormalized)) * 0.3f * chargeNormalized);
+
             if (Input.GetButton("Boost" + AssignedPlayer) && charge > 0)
             {
                 BoostSound.Play();
                 OnBoostChargeChanged(-1);
                 isBoosting = true;
-                boostDuration = MaxBoostDuration * ((float)charge / BoostSteps);
+                boostDuration = MaxBoostDuration * chargeNormalized;
+                Model.DOKill();
+                Model.DOScale(1.3f, boostDuration * 0.5f).OnComplete(() => Model.DOScale(1f, boostDuration * 0.5f));
                 boostActivationTime = Time.time;
                 boostCharge = 0f;
+                Mat.SetColor("_EmissionColor", Color.white * 0.3f * chargeNormalized);
             }
         }
         else
@@ -120,16 +135,21 @@ public class Snail : MonoBehaviour
 
     private void UpdateTransform()
     {
-        float boost = isBoosting ? boostMultiplier : 0f;
-        transform.position += transform.up * MoveSpeed * (1f + boost) * Time.deltaTime;
+        float boostMultiplier = isBoosting ? this.boostMultiplier : 0f;
+        float slimeMultiplier = isMovingOnSlime ? SlimeSpeedBonus : 0f; 
+
+        float moveSpeed = MoveSpeed * (1f + boostMultiplier) * (1f + slimeMultiplier);
+        float turnSpeed = TurnSpeed * (1f + boostMultiplier * 0.5f) * (1f + slimeMultiplier * 0.5f);
+
+        transform.position += transform.up * moveSpeed * Time.deltaTime;
 
         float rotation = transform.eulerAngles.z;
         float rotationInput = Input.GetAxis(AssignedPlayer.ToString());
         Anim.SetFloat("rotation", rotationInput);
-        rotation += rotationInput * TurnSpeed * (1f + boost * 0.5f) * Time.deltaTime;
+        rotation += rotationInput * turnSpeed * Time.deltaTime;
         transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, rotation);
     }
-
+ 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Environment"))
@@ -153,12 +173,24 @@ public class Snail : MonoBehaviour
         }
     }
 
+    private void OnTriggerStay2D(Collider2D collider)
+    {
+        if (collider.GetComponent<SlimeBlob>() != null)
+        {
+            isMovingOnSlime = true;
+        }
+    }
+
     private void OnTriggerExit2D(Collider2D collider)
     {
         if (collider.gameObject.CompareTag(AssignedPlayer.ToString()) && collider.GetComponent<Trail>() != null)
         {
             BlobCreateSound.Play();
             OnCreateSlimeBlob(Trail.GetShapePositions(transform.position));
+        }
+        if(collider.GetComponent<SlimeBlob>() != null)
+        {
+            isMovingOnSlime = false;
         }
     }
 }

@@ -17,7 +17,7 @@ public class SlimeSplatPool : MonoBehaviour
     private static SlimeSplatPool instance;
     private ObjectPool[] pools;
 
-    public void Start()
+    public void Init()
     {
         pools = GetComponentsInChildren<ObjectPool>();   
         foreach(ObjectPool pool in pools)
@@ -40,6 +40,7 @@ public class SlimeSplatPool : MonoBehaviour
         GameObject splatObject = pools[poolIndex].GetObjectFromPool();
         splatObject.transform.parent = transform;
         splatObject.transform.position = position;
+        splatObject.transform.localScale = Vector3.one;
         splatObject.SetActive(true);
 
         SlimeSplat splat = splatObject.GetComponent<SlimeSplat>();

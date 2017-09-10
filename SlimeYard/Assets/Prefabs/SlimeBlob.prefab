@@ -153,6 +153,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Distortion: 0.04
   Lifetime: 22
+  SplatPlacementProbability: 0.6
   SizeOverLifetime:
     serializedVersion: 2
     m_Curve:

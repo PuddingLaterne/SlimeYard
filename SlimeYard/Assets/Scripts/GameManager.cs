@@ -26,20 +26,17 @@ public enum GameOverType
 
 public class GameManager : MonoBehaviour
 {
-    [Header("Round System")]
-    public int NumRounds = 3;
-
     [Header("Menu/Battle Stuff")]
-    public CanvasGroup BattleCanvas;
-    public CanvasGroup MenuCanvas;
+    public CanvasHandlerBattle BattleCanvas;
+    public CanvasHandlerMenu MenuCanvas;
     public Transform BattleCamPos;
     public Transform MenuCamPos;
+    public Fill Fill;
 
     [Header("Player Specific Settings")]
     public Color NeutralColor;
     public Color[] PlayerColors = new Color[numPlayers];
     public Vector2[] PlayerStartPositions = new Vector2[numPlayers];
-    public float[] PlayerStartOrientation = new float[numPlayers];
     public Vector2[] PlayerMenuPositions = new Vector2[numPlayers];
     public float[] PlayerMenuOrientation = new float[numPlayers];
 
@@ -49,25 +46,23 @@ public class GameManager : MonoBehaviour
     public GameObject TrailPrefab;
 
     [Header("GUI References")]
-    public GameObject InfoOverlay;
-    public Text InfoText;
-    public Text RoundText;
+    public UIObject Info;
     public GameObject[] PlayerPanels = new GameObject[numPlayers];
-    public Text[] Score = new Text[numPlayers];
-    public Text[] Names = new Text[numPlayers];
 
     [Header("Timing")]
     public float RoundWaitingTime = 2f;
-    public float ResetWaitingTime = 4f;
+    public float BattleStartDuration = 4f;
+    public float BackToMenuDuration = 2f;
 
     private Snail[] snails = new Snail[numPlayers];
     private BoostGauge[] boostGauges = new BoostGauge[numPlayers];
+    private ScoreDisplay[] scoreDisplays = new ScoreDisplay[numPlayers];
     private int[] score = new int[numPlayers];
 
     private bool gameOver = false;
-    private int currentRound;
     private GameState gameState;
 
+    private const int maxScore = 3;
     private const int numPlayers = 2;
 
     public void Start()
@@ -92,7 +87,9 @@ public class GameManager : MonoBehaviour
             snails[i] = snail;
 
         }
+        Info.Hide(0f, 0f);
         BlobObjectPool.Init();
+        SlimeSplatPool.Instance.Init();
         InitGUI();
         UpdateScoreGUI();
         SetGameState(GameState.Menu);
@@ -102,7 +99,7 @@ public class GameManager : MonoBehaviour
     {
         if(gameState == GameState.Menu && Input.anyKeyDown)
         {
-            SetGameState(GameState.Battle, ResetWaitingTime);
+            SetGameState(GameState.Battle, BattleStartDuration);
         }
         if(Input.GetKeyDown(KeyCode.Escape))
         {
@@ -113,8 +110,8 @@ public class GameManager : MonoBehaviour
     private void SetGameState(GameState newState, float transitionDuration = 0f)
     {
         gameState = newState;
-        CanvasGroup newCanvas = null;
-        CanvasGroup oldCanvas = null;
+        CanvasHandler newCanvas = null;
+        CanvasHandler oldCanvas = null;
         Transform targetTransform = null;
 
         switch(gameState)
@@ -122,17 +119,17 @@ public class GameManager : MonoBehaviour
             case GameState.Battle:
                 SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.GameStart);
                 targetTransform = BattleCamPos;
-                newCanvas = MenuCanvas;
-                oldCanvas = BattleCanvas;
+                newCanvas = BattleCanvas;
+                oldCanvas = MenuCanvas;
                 StartRound(transitionDuration);
                 StartCoroutine(WaitForEnableMovement(transitionDuration, true));
                 break;
             case GameState.Menu:
                 targetTransform = MenuCamPos;
-                newCanvas = BattleCanvas;
-                oldCanvas = MenuCanvas;
+                newCanvas = MenuCanvas;
+                oldCanvas = BattleCanvas;
                 BlobObjectPool.Reset();
-                currentRound = 1;
+                SlimeSplatPool.Instance.Reset();
                 for (int i = 0; i < numPlayers; i++)
                 {
                     score[i] = 0;
@@ -149,10 +146,9 @@ public class GameManager : MonoBehaviour
         Camera.main.transform.DOMove(targetTransform.position, transitionDuration);
         Camera.main.transform.DORotateQuaternion(targetTransform.rotation, transitionDuration);
 
-        newCanvas.DOKill();
-        newCanvas.DOFade(0f, transitionDuration * 0.5f);
-        oldCanvas.DOKill();
-        oldCanvas.DOFade(1f, transitionDuration * 0.5f).SetDelay(transitionDuration * 0.5f);
+        newCanvas.Show(transitionDuration * 0.4f, transitionDuration * 0.6f);
+        oldCanvas.Hide(transitionDuration * 0.4f, 0f);
+        Info.Hide(transitionDuration * 0.4f, 0f);
 
         SoundManager.Instance.SwitchMusic(gameState, transitionDuration);
     }
@@ -162,38 +158,37 @@ public class GameManager : MonoBehaviour
         UpdateScoreGUI();
         for (int i = 0; i < numPlayers; i++)
         {
+            int index = i;
             Snail snail = snails[i];
             snail.Reset();
             snail.transform.DOKill();
-            snail.transform.DOMove(PlayerStartPositions[i], transitionDuration).SetDelay(transitionDuration * 0.4f).SetEase(Ease.Linear);
-            snail.Anim.SetFloat("rotation", -1f);
-            snail.transform.DORotate(new Vector3(0f, 0f, PlayerStartOrientation[i]), transitionDuration * 0.4f).OnComplete(
-                () =>
-                {
-                    snail.Anim.SetFloat("rotation", 0f);
-                });
+            snail.transform.eulerAngles = new Vector3(0f, 0f, PlayerMenuOrientation[index]);
+            snail.transform.DOMove(PlayerStartPositions[index], transitionDuration);
             snail.Trail.Clear();
             snail.Anim.SetTrigger("move");
         }
-        InfoText.text = "";
-        RoundText.text = "Round " + currentRound + " : " + NumRounds;
         BlobObjectPool.Reset();
         SlimeSplatPool.Instance.Reset();
         gameOver = false;
-        InfoOverlay.SetActive(false);
     }
    
     private void InitGUI()
     {
         for (int i = 0; i < numPlayers; i++)
         {
+            PlayerPanels[i].GetComponent<Image>().color = PlayerColors[i];
+
             foreach (Text text in PlayerPanels[i].GetComponentsInChildren<Text>())
             {
                 text.color = PlayerColors[i];
             }
+
             boostGauges[i] = PlayerPanels[i].GetComponentInChildren<BoostGauge>();
-            boostGauges[i].BoostSteps = snails[i].BoostSteps;
             boostGauges[i].Color = PlayerColors[i];
+            boostGauges[i].BoostCharge = 0;
+
+            scoreDisplays[i] = PlayerPanels[i].GetComponentInChildren<ScoreDisplay>();
+            scoreDisplays[i].Color = PlayerColors[i];
         }
     }
 
@@ -201,8 +196,7 @@ public class GameManager : MonoBehaviour
     {
         for(int i = 0; i < numPlayers; i++)
         {
-            Names[i].text = ((Player)i).ToString();
-            Score[i].text = score[i].ToString();
+            scoreDisplays[i].Score = score[i];
         }
     }
 
@@ -251,79 +245,50 @@ public class GameManager : MonoBehaviour
         gameOver = true;
         EnableSnailMovement(false);
 
-        bool lastRound = (currentRound == NumRounds);
-        InfoOverlay.SetActive(true);
-
         int winnerIndex = gameOverType != GameOverType.SnailCrash ? (snailIndex + 1) % 2 : -1;
+        Color color = NeutralColor;
 
         switch(gameOverType)
         {
             case GameOverType.SnailCrash:
                 SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.SnailCrash);
-                InfoText.text = "Snail Crash!";
-                InfoText.color = NeutralColor;
+                Info.Text = "Snail Crash!";
+                color = NeutralColor;
                 break;
             case GameOverType.WallCrash:
                 SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.WallCrash);
-                IncreaseAndShowWinnerScore(winnerIndex);
+                Info.Text = "Shattered!";
+                score[winnerIndex]++;
+                color = PlayerColors[winnerIndex];
                 break;
             case GameOverType.Slime:
                 SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.Slime);
-                IncreaseAndShowWinnerScore(winnerIndex);
+                score[winnerIndex]++;
+                color = PlayerColors[winnerIndex];
                 break;
         }
+        Info.Color = color;
 
         UpdateScoreGUI();
         SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.ScoreChange, RoundWaitingTime * 0.5f);
-        yield return new WaitForSeconds(RoundWaitingTime);
-        if (!lastRound)
+
+        if (winnerIndex == -1 || score[winnerIndex] != maxScore)
         {
-            currentRound++;
+
+            Info.Show(RoundWaitingTime * 0.3f, RoundWaitingTime * 0.3f);
+            Fill.FillScreen(color, RoundWaitingTime * 0.4f, RoundWaitingTime * 0.4f);
+            yield return new WaitForSeconds(RoundWaitingTime);        
+            Info.Hide(RoundWaitingTime * 0.3f, 0f);
             EnableSnailMovement(true);
             StartRound();
         }
         else
         {
-            DisplayResult();
-            yield return new WaitForSeconds(ResetWaitingTime);
-            SetGameState(GameState.Menu, ResetWaitingTime);
+            Info.Text = "Game Over!";
+            Info.Show(BackToMenuDuration * 0.3f, RoundWaitingTime * 0.2f);
+            Fill.FillScreen(color, BackToMenuDuration * 0.4f, BackToMenuDuration * 0.3f);
+            yield return new WaitForSeconds(BackToMenuDuration);
+            SetGameState(GameState.Menu, BackToMenuDuration);
         }
     }
-
-    private void IncreaseAndShowWinnerScore(int winnerIndex)
-    {
-        score[winnerIndex]++;
-        InfoText.text = (Player)winnerIndex + " won!";
-        InfoText.color = PlayerColors[winnerIndex];
-    }
-
-    private void DisplayResult()
-    {
-        SoundManager.Instance.PlaySound(SoundManager.SoundEffectType.GameOver);
-        int winnerIndex = -1;
-        int highestScore = -1;
-        int lastScore = score[0];
-        bool tie = true;
-        for(int i = 0; i < numPlayers; i++)
-        {
-            tie = tie && score[i] == lastScore;
-            if(highestScore < score[i])
-            {
-                highestScore = score[i];
-                winnerIndex = i;
-            }
-        }
-
-        if (tie)
-        {
-            InfoText.text = "Tie!";
-            InfoText.color = NeutralColor;
-        }
-        else
-        {
-            InfoText.text = "Game over! " + (Player)winnerIndex + " won!";
-            InfoText.color = PlayerColors[winnerIndex];
-        }
-    }
-
 }

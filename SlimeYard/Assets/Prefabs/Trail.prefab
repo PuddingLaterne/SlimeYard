@@ -69,6 +69,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PointLifetime: 8
+  SplatPlacementProbability: 0.6
 --- !u!120 &120890015570158174
 LineRenderer:
   m_ObjectHideFlags: 1

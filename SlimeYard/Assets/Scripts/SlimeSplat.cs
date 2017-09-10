@@ -11,6 +11,8 @@ public class SlimeSplat : MonoBehaviour
     public float LifeTime { get; set; }
 
     private float creationTime;
+    private const float maxWorldSize = 1f;
+    private Vector3 size;
     
     public Color Color
     {
@@ -25,12 +27,20 @@ public class SlimeSplat : MonoBehaviour
     {
         creationTime = Time.time;
         transform.position += (Vector3)(Vector2.one * Random.Range(-MaxOffset, MaxOffset));
-        transform.localScale = Vector3.one * Random.Range(MinSize, MaxSize);
+        size = Vector3.one * Mathf.Clamp(Random.Range(MinSize, MaxSize), MinSize, MaxSize);
+        transform.localScale = size;
         transform.eulerAngles = new Vector3(0f, 0f, Random.Range(0f, 360f));
     }
 
 	public void Update ()
     {
+        if(transform.lossyScale.magnitude > maxWorldSize)
+        {
+            Transform parent = transform.parent;
+            transform.parent = null;
+            transform.localScale = size;
+            transform.parent = parent;
+        }
 		if(Time.time - creationTime > LifeTime)
         {
             gameObject.SetActive(false);
